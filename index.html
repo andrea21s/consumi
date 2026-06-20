@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Consumi Benzina</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%E2%9B%BD%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0f1115; --card:#181b22; --card2:#1f2330; --line:#2a2f3a;
+  --txt:#e8eaed; --muted:#9aa0ab; --accent:#3b82f6; --accent2:#22c55e;
+  --danger:#ef4444; --radius:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--txt);
+  font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  padding:14px; padding-bottom:40px; max-width:680px; margin:0 auto;
+  -webkit-text-size-adjust:100%;
+}
+h1{font-size:20px;margin:4px 0 14px;display:flex;align-items:center;gap:8px}
+h2{font-size:15px;margin:0 0 10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+label{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
+input{
+  width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);
+  border-radius:10px;padding:12px;font-size:16px;
+}
+input:focus{outline:none;border-color:var(--accent)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row1{margin-bottom:10px}
+.date-row{display:flex;gap:8px}
+.today{width:auto;flex:0 0 auto;background:var(--card2);color:var(--txt);border:1px solid var(--line);padding:0 18px;font-weight:600}
+.hint{font-size:12px;color:var(--muted);margin-top:6px;min-height:16px}
+button{
+  font:inherit;font-weight:600;border:none;border-radius:10px;padding:13px;
+  width:100%;cursor:pointer;color:#fff;background:var(--accent);
+}
+button:active{transform:translateY(1px)}
+.btn-row{display:flex;gap:10px;margin-top:12px}
+.btn-row button{flex:1}
+.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+/* riepilogo */
+.sum{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:10px;overflow:hidden}
+.sum>div{background:var(--card);padding:11px 12px}
+.sum .k{font-size:12px;color:var(--muted)}
+.sum .v{font-size:18px;font-weight:700;margin-top:2px}
+.sum .v small{font-size:12px;font-weight:500;color:var(--muted)}
+.full{grid-column:1/-1}
+/* list */
+.item{border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:9px;background:var(--card2)}
+.item .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.item .st{font-weight:700}
+.item .dt{font-size:12px;color:var(--muted)}
+.item .meta{font-size:13px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:10px}
+.item .meta b{color:var(--txt);font-weight:600}
+.item .x{color:var(--danger);background:none;border:none;width:auto;padding:4px 6px;font-size:18px;line-height:1;flex:0 0 auto}
+.cons-good{color:var(--accent2)}
+.cons-bad{color:var(--danger)}
+.empty{color:var(--muted);text-align:center;padding:20px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tabs button{background:var(--card2);color:var(--muted);border:1px solid var(--line)}
+.tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+</style>
+</head>
+<body>
+<h1>⛽ Consumi Benzina</h1>
+
+<div class="tabs">
+  <button id="tab-add" class="on" onclick="showTab('add')">Aggiungi</button>
+  <button id="tab-sum" onclick="showTab('sum')">Riepilogo</button>
+  <button id="tab-list" onclick="showTab('list')">Storico</button>
+</div>
+
+<!-- AGGIUNGI -->
+<section id="view-add">
+  <div class="card">
+    <h2>Nuovo rifornimento</h2>
+    <div class="row1">
+      <label>Data</label>
+      <div class="date-row">
+        <input type="date" id="f-date">
+        <button type="button" class="today" onclick="setToday()">Oggi</button>
+      </div>
+    </div>
+    <div class="row1">
+      <label>Distributore</label>
+      <input id="f-station" list="stations" placeholder="es. Q8, ELLEBI…" autocomplete="off">
+      <datalist id="stations"></datalist>
+    </div>
+    <div class="grid">
+      <div>
+        <label>Importo (€)</label>
+        <input type="number" id="f-imp" inputmode="decimal" step="0.01" placeholder="50">
+      </div>
+      <div>
+        <label>Prezzo (€/L)</label>
+        <input type="number" id="f-prz" inputmode="decimal" step="0.001" placeholder="1.799">
+      </div>
+    </div>
+    <div class="row1" style="margin-top:10px">
+      <label>Contachilometri (km totali) — opzionale</label>
+      <input type="number" id="f-odo" inputmode="numeric" step="1" placeholder="es. 164991">
+    </div>
+    <div class="hint" id="hint"></div>
+    <button onclick="addEntry()">Aggiungi rifornimento</button>
+  </div>
+</section>
+
+<!-- RIEPILOGO -->
+<section id="view-sum" hidden>
+  <div class="card">
+    <h2>Riepilogo generale</h2>
+    <div class="sum" id="sum"></div>
+  </div>
+  <div class="card">
+    <h2>Dati</h2>
+    <div class="btn-row">
+      <button class="ghost" onclick="exportData()">Esporta backup</button>
+      <button class="ghost" onclick="document.getElementById('imp-file').click()">Importa backup</button>
+    </div>
+    <input type="file" id="imp-file" accept=".json" hidden onchange="importData(this)">
+  </div>
+</section>
+
+<!-- STORICO -->
+<section id="view-list" hidden>
+  <div class="card">
+    <h2>Storico rifornimenti</h2>
+    <div id="list"></div>
+  </div>
+</section>
+
+<script>
+const KEY="consumi_v1";
+// chiavi: date, station, importo, prezzo, odo (contachilometri), kmp (km percorsi manuali)
+const SEED=[
+{"date":"2023-03-04","station":"Q8","importo":50,"prezzo":1.77,"odo":null,"kmp":430},
+{"date":"2023-03-11","station":"ELLEBI","importo":20,"prezzo":1.775,"odo":null,"kmp":110},
+{"date":"2023-03-17","station":"ELLEBI","importo":20,"prezzo":1.775,"odo":null,"kmp":148},
+{"date":"2023-03-25","station":"ELLEBI","importo":20,"prezzo":1.765,"odo":null,"kmp":128},
+{"date":"2023-04-01","station":"ELLEBI","importo":50,"prezzo":1.755,"odo":null,"kmp":380},
+{"date":"2023-04-24","station":"ELLEBI","importo":50,"prezzo":1.695,"odo":null,"kmp":429},
+{"date":"2023-05-16","station":"ELLEBI","importo":50,"prezzo":1.625,"odo":null,"kmp":450},
+{"date":"2023-06-11","station":"ELLEBI","importo":70,"prezzo":1.665,"odo":null,"kmp":652},
+{"date":"2023-07-17","station":"ELLEBI","importo":50,"prezzo":1.679,"odo":null,"kmp":536},
+{"date":"2023-07-31","station":"ELLEBI","importo":50,"prezzo":1.775,"odo":null,"kmp":381},
+{"date":"2023-08-15","station":"AGIP","importo":50,"prezzo":1.834,"odo":null,"kmp":454},
+{"date":"2023-09-02","station":"BASILE","importo":50,"prezzo":1.839,"odo":null,"kmp":388},
+{"date":"2023-10-01","station":"ELLEBI","importo":50,"prezzo":1.909,"odo":null,"kmp":412},
+{"date":"2024-03-05","station":"Q8","importo":70,"prezzo":1.769,"odo":null,"kmp":530},
+{"date":"2024-04-02","station":"Q8","importo":60,"prezzo":1.759,"odo":null,"kmp":451},
+{"date":"2024-04-28","station":"IP","importo":40,"prezzo":1.749,"odo":null,"kmp":300},
+{"date":"2024-05-21","station":"Q8","importo":50,"prezzo":1.695,"odo":null,"kmp":457},
+{"date":"2024-06-07","station":"IP","importo":60,"prezzo":1.619,"odo":null,"kmp":403},
+{"date":"2024-06-10","station":"IP","importo":40,"prezzo":1.629,"odo":null,"kmp":489},
+{"date":"2024-07-01","station":"ELLEBI","importo":72.03,"prezzo":1.715,"odo":null,"kmp":862},
+{"date":"2024-07-27","station":"AGIP","importo":50,"prezzo":1.709,"odo":null,"kmp":430},
+{"date":"2024-08-10","station":"Q8","importo":33.48,"prezzo":1.669,"odo":null,"kmp":300},
+{"date":"2024-08-17","station":"Q8","importo":60.02,"prezzo":1.669,"odo":null,"kmp":530},
+{"date":"2024-09-12","station":"ELLEBI","importo":60,"prezzo":1.595,"odo":null,"kmp":540},
+{"date":"2024-10-14","station":"ELLEBI","importo":50,"prezzo":1.615,"odo":null,"kmp":400},
+{"date":"2024-11-08","station":"Q8","importo":50,"prezzo":1.599,"odo":155407,"kmp":null},
+{"date":"2024-11-30","station":"ELLEBI","importo":50,"prezzo":1.615,"odo":155894,"kmp":487},
+{"date":"2024-12-20","station":"TAMOIL","importo":50,"prezzo":1.619,"odo":156291,"kmp":397},
+{"date":"2025-01-12","station":"ELLEBI","importo":50,"prezzo":1.679,"odo":156738,"kmp":447},
+{"date":"2025-01-26","station":"Q8","importo":50,"prezzo":1.679,"odo":157000,"kmp":262},
+{"date":"2025-03-03","station":"ELLEBI","importo":50,"prezzo":1.695,"odo":157612,"kmp":612},
+{"date":"2025-03-24","station":"Q8","importo":50,"prezzo":1.659,"odo":157979,"kmp":367},
+{"date":"2025-04-21","station":"Q8","importo":50,"prezzo":1.569,"odo":158378,"kmp":399},
+{"date":"2025-05-06","station":"Q8","importo":50,"prezzo":1.549,"odo":158915,"kmp":537},
+{"date":"2025-06-05","station":"Q8","importo":30,"prezzo":1.549,"odo":159279,"kmp":364},
+{"date":"2025-06-08","station":"Q8","importo":50,"prezzo":1.539,"odo":159633,"kmp":354},
+{"date":"2025-06-22","station":"Q8","importo":50,"prezzo":1.659,"odo":160155,"kmp":522},
+{"date":"2025-07-17","station":"","importo":70,"prezzo":1.659,"odo":160592,"kmp":437},
+{"date":"2025-08-14","station":"Q8","importo":50,"prezzo":1.609,"odo":161220,"kmp":628},
+{"date":"2025-09-03","station":"ELLEBI","importo":50,"prezzo":1.585,"odo":161698,"kmp":478},
+{"date":"2025-09-26","station":"Q8","importo":50,"prezzo":1.599,"odo":162148,"kmp":450},
+{"date":"2025-10-23","station":"Q8","importo":50,"prezzo":1.599,"odo":162572,"kmp":424},
+{"date":"2025-12-17","station":"Q8","importo":90,"prezzo":1.649,"odo":162948,"kmp":376},
+{"date":"2026-02-02","station":"Q8","importo":50,"prezzo":1.669,"odo":163662,"kmp":714},
+{"date":"2026-02-24","station":"Q8","importo":50,"prezzo":1.689,"odo":164059,"kmp":397},
+{"date":"2026-03-30","station":"Q8","importo":50,"prezzo":1.999,"odo":164416,"kmp":357},
+{"date":"2026-04-15","station":"Q8","importo":50,"prezzo":2.06,"odo":null,"kmp":null},
+{"date":"2026-05-04","station":"Q8","importo":50,"prezzo":2.039,"odo":164770,"kmp":null},
+{"date":"2026-06-03","station":"Potenza (pezze)","importo":50,"prezzo":1.919,"odo":164991,"kmp":221}
+];
+
+let data=load();
+
+function load(){
+  try{const s=localStorage.getItem(KEY); if(s) return JSON.parse(s);}catch(e){}
+  const d=SEED.slice(); save(d); return d;
+}
+function save(d){ data=d||data; localStorage.setItem(KEY,JSON.stringify(data)); }
+
+const num=v=>(v===""||v==null||isNaN(+v))?null:+v;
+function todayLocal(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);}
+function setToday(){document.getElementById("f-date").value=todayLocal();}
+function fmt(n,dec,suf){ if(n==null||!isFinite(n)) return "—";
+  return n.toLocaleString("it-IT",{minimumFractionDigits:dec,maximumFractionDigits:dec})+(suf||""); }
+function dmy(iso){ if(!iso) return "—"; const[y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; }
+
+// arricchisce ogni voce con litri / km percorsi / consumo (logica excel)
+function compute(){
+  const list=data.slice().sort((a,b)=>(a.date||"")<(b.date||"")?-1:1);
+  let prev=null; // voce precedente (come excel: differenza solo con la riga subito sopra)
+  for(const e of list){
+    e.litri=(e.importo>0&&e.prezzo>0)?e.importo/e.prezzo:null;
+    if(e.odo!=null&&prev&&prev.odo!=null) e.kmPerc=e.odo-prev.odo;
+    else e.kmPerc=(e.kmp!=null)?e.kmp:null;
+    e.consumo=(e.kmPerc!=null&&e.litri)?e.kmPerc/e.litri:null;
+    prev=e;
+  }
+  return list;
+}
+
+function summary(list){
+  const imp=list.filter(e=>e.importo>0);
+  const count=imp.length;
+  const spesa=imp.reduce((s,e)=>s+e.importo,0);
+  const litri=list.reduce((s,e)=>s+(e.litri||0),0);
+  const km=list.reduce((s,e)=>s+(e.kmPerc||0),0);
+  const cons=list.map(e=>e.consumo).filter(c=>c!=null&&isFinite(c));
+  const odos=list.map(e=>e.odo).filter(o=>o!=null);
+  return {
+    count, spesa, litri, km,
+    consMedio: litri?km/litri:null,
+    prezzoMedio: litri?spesa/litri:null,
+    costoKm: km?spesa/km:null,
+    spesaPieno: count?spesa/count:null,
+    best: cons.length?Math.max(...cons):null,
+    worst: cons.length?Math.min(...cons):null,
+    ultimoOdo: odos.length?Math.max(...odos):null,
+  };
+}
+
+function render(){
+  const list=compute();
+  // datalist distributori
+  const sts=[...new Set(data.map(e=>e.station).filter(Boolean))].sort();
+  document.getElementById("stations").innerHTML=sts.map(s=>`<option value="${s}">`).join("");
+
+  // riepilogo
+  const s=summary(list);
+  document.getElementById("sum").innerHTML=`
+    ${cell("Rifornimenti",s.count,"")}
+    ${cell("Spesa totale",fmt(s.spesa,2," €"))}
+    ${cell("Litri totali",fmt(s.litri,1," L"))}
+    ${cell("Km percorsi",fmt(s.km,0," km"))}
+    ${cell("Consumo medio",fmt(s.consMedio,2),"km/l")}
+    ${cell("Prezzo medio",fmt(s.prezzoMedio,3),"€/l")}
+    ${cell("Costo medio",fmt(s.costoKm,3),"€/km")}
+    ${cell("Spesa media / pieno",fmt(s.spesaPieno,2," €"))}
+    ${cell("Consumo migliore",fmt(s.best,2),"km/l")}
+    ${cell("Consumo peggiore",fmt(s.worst,2),"km/l")}
+    ${cell("Ultimo contachilometri",fmt(s.ultimoOdo,0," km"),"","full")}
+  `;
+
+  // storico (più recente in alto)
+  const box=document.getElementById("list");
+  if(!list.length){ box.innerHTML='<div class="empty">Nessun rifornimento.</div>'; return; }
+  box.innerHTML=list.slice().reverse().map(e=>{
+    const cc=e.consumo==null?"":(e.consumo>=s.consMedio?"cons-good":"cons-bad");
+    return `<div class="item">
+      <div class="top">
+        <span class="st">${e.station||"—"}</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span class="dt">${dmy(e.date)}</span>
+          <button class="x" title="Elimina" onclick="del('${e.date}','${(e.station||"").replace(/'/g,"\\'")}',${e.odo??'null'})">✕</button>
+        </span>
+      </div>
+      <div class="meta">
+        <span><b>${fmt(e.importo,2," €")}</b></span>
+        <span>${fmt(e.prezzo,3," €/l")}</span>
+        <span><b>${fmt(e.litri,2," L")}</b></span>
+        <span>${e.kmPerc!=null?fmt(e.kmPerc,0," km"):"—"}</span>
+        <span class="${cc}"><b>${e.consumo!=null?fmt(e.consumo,2," km/l"):"—"}</b></span>
+      </div>
+    </div>`;
+  }).join("");
+}
+function cell(k,v,suf,extra){
+  return `<div class="${extra||''}"><div class="k">${k}</div>
+    <div class="v">${v}${suf?` <small>${suf}</small>`:""}</div></div>`;
+}
+
+// preview litri live
+function updateHint(){
+  const i=num(document.getElementById("f-imp").value), p=num(document.getElementById("f-prz").value);
+  document.getElementById("hint").textContent=(i&&p)?`≈ ${fmt(i/p,2)} litri`:"";
+}
+["f-imp","f-prz"].forEach(id=>document.getElementById(id).addEventListener("input",updateHint));
+
+function addEntry(){
+  const e={
+    date:document.getElementById("f-date").value||todayLocal(),
+    station:document.getElementById("f-station").value.trim(),
+    importo:num(document.getElementById("f-imp").value),
+    prezzo:num(document.getElementById("f-prz").value),
+    odo:num(document.getElementById("f-odo").value),
+    kmp:null,
+  };
+  if(!e.importo||!e.prezzo){ alert("Inserisci importo e prezzo."); return; }
+  data.push(e); save();
+  document.getElementById("f-station").value="";
+  document.getElementById("f-imp").value="";
+  document.getElementById("f-prz").value="";
+  document.getElementById("f-odo").value="";
+  updateHint(); render(); showTab("list");
+}
+
+function del(date,station,odo){
+  if(!confirm("Eliminare questo rifornimento?")) return;
+  const i=data.findIndex(e=>e.date===date&&(e.station||"")===station&&(e.odo??null)===(odo??null));
+  if(i>=0){ data.splice(i,1); save(); render(); }
+}
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="consumi_backup_"+new Date().toISOString().slice(0,10)+".json";
+  a.click();
+}
+function importData(inp){
+  const f=inp.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{
+    const d=JSON.parse(r.result);
+    if(!Array.isArray(d)) throw 0;
+    if(confirm("Sostituire i dati attuali con il backup?")){ data=d; save(); render(); alert("Importato."); }
+  }catch(e){ alert("File non valido."); } };
+  r.readAsText(f);
+}
+
+function showTab(t){
+  for(const v of ["add","sum","list"]){
+    document.getElementById("view-"+v).hidden=(v!==t);
+    document.getElementById("tab-"+v).classList.toggle("on",v===t);
+  }
+}
+
+// init
+setToday();
+render();
+
+// installabile (manifest a runtime)
+const man={name:"Consumi Benzina",short_name:"Consumi",display:"standalone",
+  start_url:".",background_color:"#0f1115",theme_color:"#0f1115",
+  icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230f1115'/%3E%3Ctext x='256' y='384' font-size='320' text-anchor='middle'%3E%E2%9B%BD%3C/text%3E%3C/svg%3E",sizes:"any",type:"image/svg+xml"}]};
+const ml=document.createElement("link"); ml.rel="manifest";
+ml.href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:"application/json"}));
+document.head.appendChild(ml);
+
+// self-check (console): totali devono combaciare con l'excel
+(function selfCheck(){
+  const s=summary(compute());
+  console.assert(s.count===49,"count",s.count);
+  console.assert(Math.abs(s.spesa-2465.53)<0.01,"spesa",s.spesa);
+  console.assert(Math.abs(s.litri-1454.83)<0.5,"litri",s.litri);
+  console.assert(s.km===19820,"km",s.km);
+  console.assert(Math.abs(s.consMedio-13.6236)<0.01,"consMedio",s.consMedio);
+  console.assert(s.ultimoOdo===164991,"odo",s.ultimoOdo);
+  console.log("self-check ok",s);
+})();
+</script>
+</body>
+</html>
