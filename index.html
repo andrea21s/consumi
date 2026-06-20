@@ -191,7 +191,8 @@ const SEED=[
 {"date":"2026-06-03","station":"Potenza (pezze)","importo":50,"prezzo":1.919,"odo":164991,"kmp":221}
 ];
 
-let data=load();
+let data;
+data=load();
 
 function load(){
   try{const s=localStorage.getItem(KEY); if(s) return JSON.parse(s);}catch(e){}
