@@ -91,7 +91,7 @@ button:active{transform:translateY(1px)}
   <div class="card">
     <h2>Nuovo rifornimento</h2>
     <div class="row1">
-      <label>Data</label>
+      <label>Data — opzionale</label>
       <div class="date-row">
         <input type="date" id="f-date">
         <button type="button" class="today" onclick="setToday('f-date')">Oggi</button>
@@ -134,7 +134,7 @@ button:active{transform:translateY(1px)}
   <div class="card">
     <h2>Nuova manutenzione</h2>
     <div class="row1">
-      <label>Data</label>
+      <label>Data — opzionale</label>
       <div class="date-row">
         <input type="date" id="m-date">
         <button type="button" class="today" onclick="setToday('m-date')">Oggi</button>
@@ -373,7 +373,7 @@ function render(){
         <span class="st">${e.station||"—"}</span>
         <span style="display:flex;align-items:center;gap:8px">
           <span class="dt">${dmy(e.date)}</span>
-          <button class="x" title="Elimina" onclick="del('${e.date}','${(e.station||"").replace(/'/g,"\\'")}',${e.odo??'null'})">✕</button>
+          <button class="x" title="Elimina" onclick="del(${data.indexOf(e)})">✕</button>
         </span>
       </div>
       <div class="meta">
@@ -400,7 +400,7 @@ function updateHint(){
 
 function addEntry(){
   const e={
-    date:document.getElementById("f-date").value||todayLocal(),
+    date:document.getElementById("f-date").value||null,
     station:document.getElementById("f-station").value.trim(),
     importo:num(document.getElementById("f-imp").value),
     prezzo:num(document.getElementById("f-prz").value),
@@ -416,10 +416,9 @@ function addEntry(){
   updateHint(); renderAll();
 }
 
-function del(date,station,odo){
+function del(i){
   if(!confirm("Eliminare questo rifornimento?")) return;
-  const i=data.findIndex(e=>e.date===date&&(e.station||"")===station&&(e.odo??null)===(odo??null));
-  if(i>=0){ data.splice(i,1); save(); renderAll(); }
+  if(i>=0&&i<data.length){ data.splice(i,1); save(); renderAll(); }
 }
 
 function exportData(){
@@ -451,7 +450,7 @@ function importData(inp){
 
 // ---- Manutenzione ----
 function addManut(){
-  const e={date:document.getElementById("m-date").value||todayLocal(),
+  const e={date:document.getElementById("m-date").value||null,
     desc:document.getElementById("m-desc").value.trim(),
     prezzo:num(document.getElementById("m-prz").value),
     km:num(document.getElementById("m-km").value)};
@@ -560,8 +559,7 @@ function showSec(t){
   window.scrollTo(0,0);
 }
 
-// init
-setToday("f-date"); setToday("m-date");
+// init (data parte vuota: si compila solo se la ricordi, o col tasto Oggi)
 renderAll();
 
 // installabile (manifest a runtime)
