@@ -7,8 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Consumi Benzina</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%E2%9B%BD%3C/text%3E%3C/svg%3E">
+<title>Gestione Auto</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%9A%97%3C/text%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#0f1115; --card:#181b22; --card2:#1f2330; --line:#2a2f3a;
@@ -63,29 +63,38 @@ button:active{transform:translateY(1px)}
 .cons-good{color:var(--accent2)}
 .cons-bad{color:var(--danger)}
 .empty{color:var(--muted);text-align:center;padding:20px}
-.tabs{display:flex;gap:8px;margin-bottom:14px}
-.tabs button{background:var(--card2);color:var(--muted);border:1px solid var(--line)}
-.tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.nav button{background:var(--card2);color:var(--muted);border:1px solid var(--line);flex:1 1 auto;padding:11px 8px;font-size:14px}
+.nav button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.bar{display:flex;justify-content:space-between;align-items:center;padding:11px 12px;background:var(--card2);border:1px solid var(--line);border-radius:10px;margin-bottom:10px}
+.bar b{font-size:18px}
+.bar small{color:var(--muted);font-weight:500}
+.desc{font-weight:700}
+.note{font-size:13px;color:var(--muted);margin-top:5px}
+.item.done .desc{text-decoration:line-through;opacity:.55}
+.chk{flex:0 0 auto;width:auto;background:var(--card);border:1px solid var(--line);color:var(--accent2);font-size:18px;padding:5px 11px;line-height:1}
 </style>
 </head>
 <body>
-<h1>⛽ Consumi Benzina</h1>
+<h1>🚗 Gestione Auto</h1>
 
-<div class="tabs">
-  <button id="tab-add" class="on" onclick="showTab('add')">Aggiungi</button>
-  <button id="tab-sum" onclick="showTab('sum')">Riepilogo</button>
-  <button id="tab-list" onclick="showTab('list')">Storico</button>
+<div class="nav">
+  <button id="nav-benzina" class="on" onclick="showSec('benzina')">⛽ Benzina</button>
+  <button id="nav-manut" onclick="showSec('manut')">🔧 Manutenzione</button>
+  <button id="nav-prob" onclick="showSec('prob')">⚠️ Problemi</button>
+  <button id="nav-ric" onclick="showSec('ric')">🔩 Ricambi</button>
+  <button id="nav-spese" onclick="showSec('spese')">💶 Spese</button>
 </div>
 
-<!-- AGGIUNGI -->
-<section id="view-add">
+<!-- BENZINA -->
+<section id="sec-benzina">
   <div class="card">
     <h2>Nuovo rifornimento</h2>
     <div class="row1">
       <label>Data</label>
       <div class="date-row">
         <input type="date" id="f-date">
-        <button type="button" class="today" onclick="setToday()">Oggi</button>
+        <button type="button" class="today" onclick="setToday('f-date')">Oggi</button>
       </div>
     </div>
     <div class="row1">
@@ -110,29 +119,111 @@ button:active{transform:translateY(1px)}
     <div class="hint" id="hint"></div>
     <button onclick="addEntry()">Aggiungi rifornimento</button>
   </div>
-</section>
-
-<!-- RIEPILOGO -->
-<section id="view-sum" hidden>
   <div class="card">
-    <h2>Riepilogo generale</h2>
+    <h2>Riepilogo benzina</h2>
     <div class="sum" id="sum"></div>
   </div>
   <div class="card">
-    <h2>Dati</h2>
+    <h2>Storico rifornimenti</h2>
+    <div id="list"></div>
+  </div>
+</section>
+
+<!-- MANUTENZIONE -->
+<section id="sec-manut" hidden>
+  <div class="card">
+    <h2>Nuova manutenzione</h2>
+    <div class="row1">
+      <label>Data</label>
+      <div class="date-row">
+        <input type="date" id="m-date">
+        <button type="button" class="today" onclick="setToday('m-date')">Oggi</button>
+      </div>
+    </div>
+    <div class="row1">
+      <label>Descrizione</label>
+      <input id="m-desc" placeholder="es. Cambio olio + filtri">
+    </div>
+    <div class="grid">
+      <div>
+        <label>Prezzo (€)</label>
+        <input type="number" id="m-prz" inputmode="decimal" step="0.01" placeholder="120">
+      </div>
+      <div>
+        <label>Chilometraggio</label>
+        <input type="number" id="m-km" inputmode="numeric" step="1" placeholder="165000">
+      </div>
+    </div>
+    <button style="margin-top:12px" onclick="addManut()">Aggiungi manutenzione</button>
+  </div>
+  <div class="card">
+    <h2>Storico manutenzioni</h2>
+    <div class="bar"><small>Totale speso</small><b id="m-tot">—</b></div>
+    <div id="m-list"></div>
+  </div>
+</section>
+
+<!-- PROBLEMI -->
+<section id="sec-prob" hidden>
+  <div class="card">
+    <h2>Nuovo problema</h2>
+    <div class="row1">
+      <label>Descrizione</label>
+      <input id="p-desc" placeholder="es. Rumore freni anteriori">
+    </div>
+    <div class="row1">
+      <label>Nota — opzionale</label>
+      <input id="p-note" placeholder="dettagli…">
+    </div>
+    <button onclick="addProb()">Aggiungi problema</button>
+  </div>
+  <div class="card">
+    <h2>Problemi</h2>
+    <div class="bar"><small>Da risolvere / totali</small><b id="p-open">—</b></div>
+    <div id="p-list"></div>
+  </div>
+</section>
+
+<!-- RICAMBI -->
+<section id="sec-ric" hidden>
+  <div class="card">
+    <h2>Nuovo pezzo</h2>
+    <div class="row1">
+      <label>Pezzo</label>
+      <input id="r-nome" placeholder="es. Pastiglie freni anteriori">
+    </div>
+    <div class="grid">
+      <div>
+        <label>Prezzo (€)</label>
+        <input type="number" id="r-prz" inputmode="decimal" step="0.01" placeholder="45">
+      </div>
+      <div>
+        <label>Nota — opzionale</label>
+        <input id="r-note" placeholder="codice / dove comprarlo">
+      </div>
+    </div>
+    <button style="margin-top:12px" onclick="addRic()">Aggiungi pezzo</button>
+  </div>
+  <div class="card">
+    <h2>Pezzi di ricambio</h2>
+    <div class="bar"><small>Totale</small><b id="r-tot">—</b></div>
+    <div id="r-list"></div>
+  </div>
+</section>
+
+<!-- SPESE -->
+<section id="sec-spese" hidden>
+  <div class="card">
+    <h2>Riepilogo spese</h2>
+    <div class="sum" id="spese"></div>
+  </div>
+  <div class="card">
+    <h2>Backup di tutti i dati</h2>
     <div class="btn-row">
       <button class="ghost" onclick="exportData()">Esporta backup</button>
       <button class="ghost" onclick="document.getElementById('imp-file').click()">Importa backup</button>
     </div>
     <input type="file" id="imp-file" accept=".json" hidden onchange="importData(this)">
-  </div>
-</section>
-
-<!-- STORICO -->
-<section id="view-list" hidden>
-  <div class="card">
-    <h2>Storico rifornimenti</h2>
-    <div id="list"></div>
   </div>
 </section>
 
@@ -200,9 +291,18 @@ function load(){
 }
 function save(d){ data=d||data; localStorage.setItem(KEY,JSON.stringify(data)); }
 
+// altre sezioni (manutenzione / problemi / ricambi)
+function ls(k,def){ try{const s=localStorage.getItem(k); if(s) return JSON.parse(s);}catch(e){} return def; }
+function lsSave(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
+let manut=ls("manut_v1",[]);
+let problemi=ls("prob_v1",[]);
+let ricambi=ls("ric_v1",[]);
+
 const num=v=>(v===""||v==null||isNaN(+v))?null:+v;
+const eur=n=>fmt(n,2," €");
 function todayLocal(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);}
-function setToday(){document.getElementById("f-date").value=todayLocal();}
+function setToday(id){document.getElementById(id).value=todayLocal();}
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function fmt(n,dec,suf){ if(n==null||!isFinite(n)) return "—";
   return n.toLocaleString("it-IT",{minimumFractionDigits:dec,maximumFractionDigits:dec})+(suf||""); }
 function dmy(iso){ if(!iso) return "—"; const[y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; }
@@ -313,20 +413,21 @@ function addEntry(){
   document.getElementById("f-imp").value="";
   document.getElementById("f-prz").value="";
   document.getElementById("f-odo").value="";
-  updateHint(); render(); showTab("list");
+  updateHint(); renderAll();
 }
 
 function del(date,station,odo){
   if(!confirm("Eliminare questo rifornimento?")) return;
   const i=data.findIndex(e=>e.date===date&&(e.station||"")===station&&(e.odo??null)===(odo??null));
-  if(i>=0){ data.splice(i,1); save(); render(); }
+  if(i>=0){ data.splice(i,1); save(); renderAll(); }
 }
 
 function exportData(){
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const all={version:2,fuel:data,manut,problemi,ricambi};
+  const blob=new Blob([JSON.stringify(all,null,2)],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download="consumi_backup_"+new Date().toISOString().slice(0,10)+".json";
+  a.download="auto_backup_"+todayLocal()+".json";
   a.click();
 }
 function importData(inp){
@@ -334,27 +435,139 @@ function importData(inp){
   const r=new FileReader();
   r.onload=()=>{ try{
     const d=JSON.parse(r.result);
-    if(!Array.isArray(d)) throw 0;
-    if(confirm("Sostituire i dati attuali con il backup?")){ data=d; save(); render(); alert("Importato."); }
+    if(!confirm("Sostituire i dati attuali con il backup?")) return;
+    if(Array.isArray(d)){ data=d; }                 // vecchio formato (solo benzina)
+    else {
+      if(Array.isArray(d.fuel)) data=d.fuel;
+      if(Array.isArray(d.manut)) manut=d.manut;
+      if(Array.isArray(d.problemi)) problemi=d.problemi;
+      if(Array.isArray(d.ricambi)) ricambi=d.ricambi;
+    }
+    save(); lsSave("manut_v1",manut); lsSave("prob_v1",problemi); lsSave("ric_v1",ricambi);
+    renderAll(); alert("Importato.");
   }catch(e){ alert("File non valido."); } };
   r.readAsText(f);
 }
 
-function showTab(t){
-  for(const v of ["add","sum","list"]){
-    document.getElementById("view-"+v).hidden=(v!==t);
-    document.getElementById("tab-"+v).classList.toggle("on",v===t);
+// ---- Manutenzione ----
+function addManut(){
+  const e={date:document.getElementById("m-date").value||todayLocal(),
+    desc:document.getElementById("m-desc").value.trim(),
+    prezzo:num(document.getElementById("m-prz").value),
+    km:num(document.getElementById("m-km").value)};
+  if(!e.desc||!e.prezzo){ alert("Inserisci descrizione e prezzo."); return; }
+  manut.push(e); lsSave("manut_v1",manut);
+  document.getElementById("m-desc").value=""; document.getElementById("m-prz").value=""; document.getElementById("m-km").value="";
+  renderAll();
+}
+function delManut(i){ if(confirm("Eliminare questa manutenzione?")){ manut.splice(i,1); lsSave("manut_v1",manut); renderAll(); } }
+function renderManut(){
+  document.getElementById("m-tot").textContent=eur(manut.reduce((s,e)=>s+(e.prezzo||0),0));
+  const box=document.getElementById("m-list");
+  if(!manut.length){ box.innerHTML='<div class="empty">Nessuna manutenzione.</div>'; return; }
+  box.innerHTML=manut.map((e,i)=>({e,i})).sort((a,b)=>(a.e.date||"")<(b.e.date||"")?1:-1).map(({e,i})=>`
+    <div class="item">
+      <div class="top">
+        <span class="desc">${esc(e.desc)}</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span class="dt">${dmy(e.date)}</span>
+          <button class="x" title="Elimina" onclick="delManut(${i})">✕</button>
+        </span>
+      </div>
+      <div class="meta">
+        <span><b>${eur(e.prezzo)}</b></span>
+        ${e.km!=null?`<span>${fmt(e.km,0," km")}</span>`:""}
+      </div>
+    </div>`).join("");
+}
+
+// ---- Problemi ----
+function addProb(){
+  const desc=document.getElementById("p-desc").value.trim();
+  if(!desc){ alert("Inserisci una descrizione."); return; }
+  problemi.push({desc,note:document.getElementById("p-note").value.trim(),done:false,date:todayLocal()});
+  lsSave("prob_v1",problemi);
+  document.getElementById("p-desc").value=""; document.getElementById("p-note").value="";
+  renderAll();
+}
+function toggleProb(i){ problemi[i].done=!problemi[i].done; lsSave("prob_v1",problemi); renderAll(); }
+function delProb(i){ if(confirm("Eliminare questo problema?")){ problemi.splice(i,1); lsSave("prob_v1",problemi); renderAll(); } }
+function renderProb(){
+  const open=problemi.filter(p=>!p.done).length;
+  document.getElementById("p-open").textContent=open+" / "+problemi.length;
+  const box=document.getElementById("p-list");
+  if(!problemi.length){ box.innerHTML='<div class="empty">Nessun problema.</div>'; return; }
+  box.innerHTML=problemi.map((e,i)=>({e,i})).sort((a,b)=>(a.e.done?1:0)-(b.e.done?1:0)).map(({e,i})=>`
+    <div class="item ${e.done?'done':''}">
+      <div class="top" style="align-items:center">
+        <span class="desc">${esc(e.desc)}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <button class="chk" title="Segna risolto" onclick="toggleProb(${i})">${e.done?'✓':'○'}</button>
+          <button class="x" title="Elimina" onclick="delProb(${i})">✕</button>
+        </span>
+      </div>
+      ${e.note?`<div class="note">${esc(e.note)}</div>`:""}
+    </div>`).join("");
+}
+
+// ---- Ricambi ----
+function addRic(){
+  const nome=document.getElementById("r-nome").value.trim();
+  if(!nome){ alert("Inserisci il nome del pezzo."); return; }
+  ricambi.push({nome,prezzo:num(document.getElementById("r-prz").value),note:document.getElementById("r-note").value.trim()});
+  lsSave("ric_v1",ricambi);
+  document.getElementById("r-nome").value=""; document.getElementById("r-prz").value=""; document.getElementById("r-note").value="";
+  renderAll();
+}
+function delRic(i){ if(confirm("Eliminare questo pezzo?")){ ricambi.splice(i,1); lsSave("ric_v1",ricambi); renderAll(); } }
+function renderRic(){
+  document.getElementById("r-tot").textContent=eur(ricambi.reduce((s,e)=>s+(e.prezzo||0),0));
+  const box=document.getElementById("r-list");
+  if(!ricambi.length){ box.innerHTML='<div class="empty">Nessun pezzo.</div>'; return; }
+  box.innerHTML=ricambi.map((e,i)=>`
+    <div class="item">
+      <div class="top">
+        <span class="desc">${esc(e.nome)}</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span class="dt">${e.prezzo!=null?eur(e.prezzo):"—"}</span>
+          <button class="x" title="Elimina" onclick="delRic(${i})">✕</button>
+        </span>
+      </div>
+      ${e.note?`<div class="note">${esc(e.note)}</div>`:""}
+    </div>`).join("");
+}
+
+// ---- Spese (riepilogo di tutto) ----
+function renderSpese(){
+  const benz=data.reduce((s,e)=>s+(e.importo||0),0);
+  const man=manut.reduce((s,e)=>s+(e.prezzo||0),0);
+  const ric=ricambi.reduce((s,e)=>s+(e.prezzo||0),0);
+  document.getElementById("spese").innerHTML=`
+    ${cell("Benzina",eur(benz))}
+    ${cell("Manutenzione",eur(man))}
+    ${cell("Ricambi",eur(ric))}
+    ${cell("TOTALE",eur(benz+man+ric),"","full")}
+  `;
+}
+
+function renderAll(){ render(); renderManut(); renderProb(); renderRic(); renderSpese(); }
+
+function showSec(t){
+  for(const v of ["benzina","manut","prob","ric","spese"]){
+    document.getElementById("sec-"+v).hidden=(v!==t);
+    document.getElementById("nav-"+v).classList.toggle("on",v===t);
   }
+  window.scrollTo(0,0);
 }
 
 // init
-setToday();
-render();
+setToday("f-date"); setToday("m-date");
+renderAll();
 
 // installabile (manifest a runtime)
-const man={name:"Consumi Benzina",short_name:"Consumi",display:"standalone",
+const man={name:"Gestione Auto",short_name:"Auto",display:"standalone",
   start_url:".",background_color:"#0f1115",theme_color:"#0f1115",
-  icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230f1115'/%3E%3Ctext x='256' y='384' font-size='320' text-anchor='middle'%3E%E2%9B%BD%3C/text%3E%3C/svg%3E",sizes:"any",type:"image/svg+xml"}]};
+  icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230f1115'/%3E%3Ctext x='256' y='384' font-size='300' text-anchor='middle'%3E%F0%9F%9A%97%3C/text%3E%3C/svg%3E",sizes:"any",type:"image/svg+xml"}]};
 const ml=document.createElement("link"); ml.rel="manifest";
 ml.href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:"application/json"}));
 document.head.appendChild(ml);
