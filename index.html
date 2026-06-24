@@ -60,6 +60,7 @@ button:active{transform:translateY(1px)}
 .item .meta{font-size:13px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:10px}
 .item .meta b{color:var(--txt);font-weight:600}
 .item .x{color:var(--danger);background:none;border:none;width:auto;padding:4px 6px;font-size:18px;line-height:1;flex:0 0 auto}
+.item .ed{color:var(--accent);background:none;border:none;width:auto;padding:4px 6px;font-size:16px;line-height:1;flex:0 0 auto}
 .cons-good{color:var(--accent2)}
 .cons-bad{color:var(--danger)}
 .empty{color:var(--muted);text-align:center;padding:20px}
@@ -117,7 +118,10 @@ button:active{transform:translateY(1px)}
       <input type="number" id="f-odo" inputmode="numeric" step="1" placeholder="es. 164991">
     </div>
     <div class="hint" id="hint"></div>
-    <button onclick="addEntry()">Aggiungi rifornimento</button>
+    <div class="btn-row">
+      <button id="f-save" onclick="addEntry()">Aggiungi rifornimento</button>
+      <button class="ghost" id="f-cancel" onclick="cancelFuel()" hidden>Annulla</button>
+    </div>
   </div>
   <div class="card">
     <h2>Riepilogo benzina</h2>
@@ -154,7 +158,10 @@ button:active{transform:translateY(1px)}
         <input type="number" id="m-km" inputmode="numeric" step="1" placeholder="165000">
       </div>
     </div>
-    <button style="margin-top:12px" onclick="addManut()">Aggiungi manutenzione</button>
+    <div class="btn-row" style="margin-top:12px">
+      <button id="m-save" onclick="addManut()">Aggiungi manutenzione</button>
+      <button class="ghost" id="m-cancel" onclick="cancelM()" hidden>Annulla</button>
+    </div>
   </div>
   <div class="card">
     <h2>Storico manutenzioni</h2>
@@ -175,7 +182,10 @@ button:active{transform:translateY(1px)}
       <label>Nota — opzionale</label>
       <input id="p-note" placeholder="dettagli…">
     </div>
-    <button onclick="addProb()">Aggiungi problema</button>
+    <div class="btn-row">
+      <button id="p-save" onclick="addProb()">Aggiungi problema</button>
+      <button class="ghost" id="p-cancel" onclick="cancelP()" hidden>Annulla</button>
+    </div>
   </div>
   <div class="card">
     <h2>Problemi</h2>
@@ -202,7 +212,10 @@ button:active{transform:translateY(1px)}
         <input id="r-note" placeholder="codice / dove comprarlo">
       </div>
     </div>
-    <button style="margin-top:12px" onclick="addRic()">Aggiungi pezzo</button>
+    <div class="btn-row" style="margin-top:12px">
+      <button id="r-save" onclick="addRic()">Aggiungi pezzo</button>
+      <button class="ghost" id="r-cancel" onclick="cancelR()" hidden>Annulla</button>
+    </div>
   </div>
   <div class="card">
     <h2>Pezzi di ricambio</h2>
@@ -298,6 +311,14 @@ let manut=ls("manut_v1",[]);
 let problemi=ls("prob_v1",[]);
 let ricambi=ls("ric_v1",[]);
 
+// indice in modifica per ogni sezione (null = sto aggiungendo nuovo)
+let editFuel=null, editManut=null, editProb=null, editRic=null;
+const ADD_LABELS={"f-save":"Aggiungi rifornimento","m-save":"Aggiungi manutenzione","p-save":"Aggiungi problema","r-save":"Aggiungi pezzo"};
+function editMode(saveId,cancelId,on){
+  document.getElementById(saveId).textContent=on?"Salva modifiche":ADD_LABELS[saveId];
+  document.getElementById(cancelId).hidden=!on;
+}
+
 const num=v=>(v===""||v==null||isNaN(+v))?null:+v;
 const eur=n=>fmt(n,2," €");
 function todayLocal(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);}
@@ -373,6 +394,7 @@ function render(){
         <span class="st">${e.station||"—"}</span>
         <span style="display:flex;align-items:center;gap:8px">
           <span class="dt">${dmy(e.date)}</span>
+          <button class="ed" title="Modifica" onclick="editEntry(${data.indexOf(e)})">✎</button>
           <button class="x" title="Elimina" onclick="del(${data.indexOf(e)})">✕</button>
         </span>
       </div>
@@ -405,15 +427,25 @@ function addEntry(){
     importo:num(document.getElementById("f-imp").value),
     prezzo:num(document.getElementById("f-prz").value),
     odo:num(document.getElementById("f-odo").value),
-    kmp:null,
   };
   if(!e.importo||!e.prezzo){ alert("Inserisci importo e prezzo."); return; }
-  data.push(e); save();
-  document.getElementById("f-station").value="";
-  document.getElementById("f-imp").value="";
-  document.getElementById("f-prz").value="";
-  document.getElementById("f-odo").value="";
-  updateHint(); renderAll();
+  if(editFuel!=null){ data[editFuel]={...data[editFuel],...e}; }  // mantiene kmp originale
+  else { e.kmp=null; data.push(e); }
+  save(); cancelFuel(); renderAll();
+}
+function editEntry(i){
+  const e=data[i];
+  document.getElementById("f-date").value=e.date||"";
+  document.getElementById("f-station").value=e.station||"";
+  document.getElementById("f-imp").value=e.importo??"";
+  document.getElementById("f-prz").value=e.prezzo??"";
+  document.getElementById("f-odo").value=e.odo??"";
+  editFuel=i; editMode("f-save","f-cancel",true); updateHint(); showSec("benzina");
+}
+function cancelFuel(){
+  editFuel=null; editMode("f-save","f-cancel",false);
+  ["f-date","f-station","f-imp","f-prz","f-odo"].forEach(id=>document.getElementById(id).value="");
+  updateHint();
 }
 
 function del(i){
@@ -455,9 +487,20 @@ function addManut(){
     prezzo:num(document.getElementById("m-prz").value),
     km:num(document.getElementById("m-km").value)};
   if(!e.desc||!e.prezzo){ alert("Inserisci descrizione e prezzo."); return; }
-  manut.push(e); lsSave("manut_v1",manut);
-  document.getElementById("m-desc").value=""; document.getElementById("m-prz").value=""; document.getElementById("m-km").value="";
-  renderAll();
+  if(editManut!=null){ manut[editManut]=e; } else { manut.push(e); }
+  lsSave("manut_v1",manut); cancelM(); renderAll();
+}
+function editM(i){
+  const e=manut[i];
+  document.getElementById("m-date").value=e.date||"";
+  document.getElementById("m-desc").value=e.desc||"";
+  document.getElementById("m-prz").value=e.prezzo??"";
+  document.getElementById("m-km").value=e.km??"";
+  editManut=i; editMode("m-save","m-cancel",true); showSec("manut");
+}
+function cancelM(){
+  editManut=null; editMode("m-save","m-cancel",false);
+  ["m-date","m-desc","m-prz","m-km"].forEach(id=>document.getElementById(id).value="");
 }
 function delManut(i){ if(confirm("Eliminare questa manutenzione?")){ manut.splice(i,1); lsSave("manut_v1",manut); renderAll(); } }
 function renderManut(){
@@ -470,6 +513,7 @@ function renderManut(){
         <span class="desc">${esc(e.desc)}</span>
         <span style="display:flex;align-items:center;gap:8px">
           <span class="dt">${dmy(e.date)}</span>
+          <button class="ed" title="Modifica" onclick="editM(${i})">✎</button>
           <button class="x" title="Elimina" onclick="delManut(${i})">✕</button>
         </span>
       </div>
@@ -483,11 +527,21 @@ function renderManut(){
 // ---- Problemi ----
 function addProb(){
   const desc=document.getElementById("p-desc").value.trim();
+  const note=document.getElementById("p-note").value.trim();
   if(!desc){ alert("Inserisci una descrizione."); return; }
-  problemi.push({desc,note:document.getElementById("p-note").value.trim(),done:false,date:todayLocal()});
-  lsSave("prob_v1",problemi);
+  if(editProb!=null){ problemi[editProb]={...problemi[editProb],desc,note}; }  // mantiene done/data
+  else { problemi.push({desc,note,done:false,date:todayLocal()}); }
+  lsSave("prob_v1",problemi); cancelP(); renderAll();
+}
+function editP(i){
+  const e=problemi[i];
+  document.getElementById("p-desc").value=e.desc||"";
+  document.getElementById("p-note").value=e.note||"";
+  editProb=i; editMode("p-save","p-cancel",true); showSec("prob");
+}
+function cancelP(){
+  editProb=null; editMode("p-save","p-cancel",false);
   document.getElementById("p-desc").value=""; document.getElementById("p-note").value="";
-  renderAll();
 }
 function toggleProb(i){ problemi[i].done=!problemi[i].done; lsSave("prob_v1",problemi); renderAll(); }
 function delProb(i){ if(confirm("Eliminare questo problema?")){ problemi.splice(i,1); lsSave("prob_v1",problemi); renderAll(); } }
@@ -502,6 +556,7 @@ function renderProb(){
         <span class="desc">${esc(e.desc)}</span>
         <span style="display:flex;align-items:center;gap:6px">
           <button class="chk" title="Segna risolto" onclick="toggleProb(${i})">${e.done?'✓':'○'}</button>
+          <button class="ed" title="Modifica" onclick="editP(${i})">✎</button>
           <button class="x" title="Elimina" onclick="delProb(${i})">✕</button>
         </span>
       </div>
@@ -513,10 +568,20 @@ function renderProb(){
 function addRic(){
   const nome=document.getElementById("r-nome").value.trim();
   if(!nome){ alert("Inserisci il nome del pezzo."); return; }
-  ricambi.push({nome,prezzo:num(document.getElementById("r-prz").value),note:document.getElementById("r-note").value.trim()});
-  lsSave("ric_v1",ricambi);
-  document.getElementById("r-nome").value=""; document.getElementById("r-prz").value=""; document.getElementById("r-note").value="";
-  renderAll();
+  const rec={nome,prezzo:num(document.getElementById("r-prz").value),note:document.getElementById("r-note").value.trim()};
+  if(editRic!=null){ ricambi[editRic]=rec; } else { ricambi.push(rec); }
+  lsSave("ric_v1",ricambi); cancelR(); renderAll();
+}
+function editR(i){
+  const e=ricambi[i];
+  document.getElementById("r-nome").value=e.nome||"";
+  document.getElementById("r-prz").value=e.prezzo??"";
+  document.getElementById("r-note").value=e.note||"";
+  editRic=i; editMode("r-save","r-cancel",true); showSec("ric");
+}
+function cancelR(){
+  editRic=null; editMode("r-save","r-cancel",false);
+  ["r-nome","r-prz","r-note"].forEach(id=>document.getElementById(id).value="");
 }
 function delRic(i){ if(confirm("Eliminare questo pezzo?")){ ricambi.splice(i,1); lsSave("ric_v1",ricambi); renderAll(); } }
 function renderRic(){
@@ -529,6 +594,7 @@ function renderRic(){
         <span class="desc">${esc(e.nome)}</span>
         <span style="display:flex;align-items:center;gap:8px">
           <span class="dt">${e.prezzo!=null?eur(e.prezzo):"—"}</span>
+          <button class="ed" title="Modifica" onclick="editR(${i})">✎</button>
           <button class="x" title="Elimina" onclick="delRic(${i})">✕</button>
         </span>
       </div>
