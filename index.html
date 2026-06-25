@@ -581,19 +581,19 @@ function renderExtra(){
   document.getElementById("x-tot").textContent=eur(extra.reduce((s,e)=>s+(e.prezzo||0),0));
   const box=document.getElementById("x-list");
   if(!extra.length){ box.innerHTML='<div class="empty">Nessuna spesa extra.</div>'; return; }
-  box.innerHTML=extra.map((e,i)=>({e,i})).sort((a,b)=>(a.e.date||"")<(b.e.date||"")?1:-1).map(({e,i})=>`
+  box.innerHTML=extra.map((e,i)=>({e,i})).sort((a,b)=>(b.e.km??-Infinity)-(a.e.km??-Infinity)).map(({e,i})=>`
     <div class="item">
       <div class="top">
         <span class="desc">${esc(e.desc)}</span>
         <span style="display:flex;align-items:center;gap:8px">
-          <span class="dt">${dmy(e.date)}</span>
+          <span class="dt">${e.date?dmy(e.date):(e.km!=null?fmt(e.km,0," km"):"—")}</span>
           <button class="ed" title="Modifica" onclick="editEx(${i})">✎</button>
           <button class="x" title="Elimina" onclick="delEx(${i})">✕</button>
         </span>
       </div>
       <div class="meta">
         <span class="hl">${eur(e.prezzo)}</span>
-        ${e.km!=null?`<span>${fmt(e.km,0," km")}</span>`:""}
+        ${(e.date&&e.km!=null)?`<span>${fmt(e.km,0," km")}</span>`:""}
       </div>
     </div>`).join("");
 }
@@ -602,19 +602,19 @@ function renderManut(){
   document.getElementById("m-tot").textContent=eur(manut.reduce((s,e)=>s+(e.prezzo||0),0));
   const box=document.getElementById("m-list");
   if(!manut.length){ box.innerHTML='<div class="empty">Nessuna manutenzione.</div>'; return; }
-  box.innerHTML=manut.map((e,i)=>({e,i})).sort((a,b)=>(a.e.date||"")<(b.e.date||"")?1:-1).map(({e,i})=>`
+  box.innerHTML=manut.map((e,i)=>({e,i})).sort((a,b)=>(b.e.km??-Infinity)-(a.e.km??-Infinity)).map(({e,i})=>`
     <div class="item">
       <div class="top">
         <span class="desc">${esc(e.desc)}</span>
         <span style="display:flex;align-items:center;gap:8px">
-          <span class="dt">${dmy(e.date)}</span>
+          <span class="dt">${e.date?dmy(e.date):(e.km!=null?fmt(e.km,0," km"):"—")}</span>
           <button class="ed" title="Modifica" onclick="editM(${i})">✎</button>
           <button class="x" title="Elimina" onclick="delManut(${i})">✕</button>
         </span>
       </div>
       <div class="meta">
         <span class="hl">${eur(e.prezzo)}</span>
-        ${e.km!=null?`<span>${fmt(e.km,0," km")}</span>`:""}
+        ${(e.date&&e.km!=null)?`<span>${fmt(e.km,0," km")}</span>`:""}
       </div>
     </div>`).join("");
 }
