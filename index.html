@@ -51,7 +51,10 @@ button:active{transform:translateY(1px)}
 .sum .k{font-size:12px;color:var(--muted)}
 .sum .v{font-size:18px;font-weight:700;margin-top:2px}
 .sum .v small{font-size:12px;font-weight:500;color:var(--muted)}
+.sum .v.key{color:var(--accent2)}
+.sum .v.tot{font-size:24px;color:var(--accent2)}
 .full{grid-column:1/-1}
+.hl{font-size:19px;font-weight:800}
 /* list */
 .item{border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:9px;background:var(--card2)}
 .item .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -82,6 +85,7 @@ button:active{transform:translateY(1px)}
 <div class="nav">
   <button id="nav-benzina" class="on" onclick="showSec('benzina')">⛽ Benzina</button>
   <button id="nav-manut" onclick="showSec('manut')">🔧 Manutenzione</button>
+  <button id="nav-extra" onclick="showSec('extra')">➕ Extra</button>
   <button id="nav-prob" onclick="showSec('prob')">⚠️ Problemi</button>
   <button id="nav-ric" onclick="showSec('ric')">🔩 Ricambi</button>
   <button id="nav-spese" onclick="showSec('spese')">💶 Spese</button>
@@ -92,7 +96,7 @@ button:active{transform:translateY(1px)}
   <div class="card">
     <h2>Nuovo rifornimento</h2>
     <div class="row1">
-      <label>Data — opzionale</label>
+      <label>Data</label>
       <div class="date-row">
         <input type="date" id="f-date">
         <button type="button" class="today" onclick="setToday('f-date')">Oggi</button>
@@ -114,7 +118,7 @@ button:active{transform:translateY(1px)}
       </div>
     </div>
     <div class="row1" style="margin-top:10px">
-      <label>Contachilometri (km totali) — opzionale</label>
+      <label>Contachilometri (km totali)</label>
       <input type="number" id="f-odo" inputmode="numeric" step="1" placeholder="es. 164991">
     </div>
     <div class="hint" id="hint"></div>
@@ -138,7 +142,7 @@ button:active{transform:translateY(1px)}
   <div class="card">
     <h2>Nuova manutenzione</h2>
     <div class="row1">
-      <label>Data — opzionale</label>
+      <label>Data</label>
       <div class="date-row">
         <input type="date" id="m-date">
         <button type="button" class="today" onclick="setToday('m-date')">Oggi</button>
@@ -167,6 +171,43 @@ button:active{transform:translateY(1px)}
     <h2>Storico manutenzioni</h2>
     <div class="bar"><small>Totale speso</small><b id="m-tot">—</b></div>
     <div id="m-list"></div>
+  </div>
+</section>
+
+<!-- EXTRA (spese fuori manutenzione ordinaria) -->
+<section id="sec-extra" hidden>
+  <div class="card">
+    <h2>Nuova spesa extra</h2>
+    <div class="row1">
+      <label>Data</label>
+      <div class="date-row">
+        <input type="date" id="x-date">
+        <button type="button" class="today" onclick="setToday('x-date')">Oggi</button>
+      </div>
+    </div>
+    <div class="row1">
+      <label>Descrizione</label>
+      <input id="x-desc" placeholder="es. Bollo, assicurazione, gomme">
+    </div>
+    <div class="grid">
+      <div>
+        <label>Prezzo (€)</label>
+        <input type="number" id="x-prz" inputmode="decimal" step="0.01" placeholder="300">
+      </div>
+      <div>
+        <label>Chilometraggio</label>
+        <input type="number" id="x-km" inputmode="numeric" step="1" placeholder="165000">
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button id="x-save" onclick="addExtra()">Aggiungi spesa extra</button>
+      <button class="ghost" id="x-cancel" onclick="cancelEx()" hidden>Annulla</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Storico spese extra</h2>
+    <div class="bar"><small>Totale speso</small><b id="x-tot">—</b></div>
+    <div id="x-list"></div>
   </div>
 </section>
 
@@ -308,12 +349,13 @@ function save(d){ data=d||data; localStorage.setItem(KEY,JSON.stringify(data)); 
 function ls(k,def){ try{const s=localStorage.getItem(k); if(s) return JSON.parse(s);}catch(e){} return def; }
 function lsSave(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
 let manut=ls("manut_v1",[]);
+let extra=ls("extra_v1",[]);
 let problemi=ls("prob_v1",[]);
 let ricambi=ls("ric_v1",[]);
 
 // indice in modifica per ogni sezione (null = sto aggiungendo nuovo)
-let editFuel=null, editManut=null, editProb=null, editRic=null;
-const ADD_LABELS={"f-save":"Aggiungi rifornimento","m-save":"Aggiungi manutenzione","p-save":"Aggiungi problema","r-save":"Aggiungi pezzo"};
+let editFuel=null, editManut=null, editExtra=null, editProb=null, editRic=null;
+const ADD_LABELS={"f-save":"Aggiungi rifornimento","m-save":"Aggiungi manutenzione","x-save":"Aggiungi spesa extra","p-save":"Aggiungi problema","r-save":"Aggiungi pezzo"};
 function editMode(saveId,cancelId,on){
   document.getElementById(saveId).textContent=on?"Salva modifiche":ADD_LABELS[saveId];
   document.getElementById(cancelId).hidden=!on;
@@ -328,9 +370,17 @@ function fmt(n,dec,suf){ if(n==null||!isFinite(n)) return "—";
   return n.toLocaleString("it-IT",{minimumFractionDigits:dec,maximumFractionDigits:dec})+(suf||""); }
 function dmy(iso){ if(!iso) return "—"; const[y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; }
 
+// ordine cronologico: per data; se manca la data usa il contachilometri
+function chrono(a,b){
+  if(a.date&&b.date) return a.date<b.date?-1:(a.date>b.date?1:0);
+  if(a.odo!=null&&b.odo!=null) return a.odo-b.odo;
+  if(!a.date&&a.odo==null) return 1;
+  if(!b.date&&b.odo==null) return -1;
+  return a.date?-1:1;
+}
 // arricchisce ogni voce con litri / km percorsi / consumo (logica excel)
 function compute(){
-  const list=data.slice().sort((a,b)=>(a.date||"")<(b.date||"")?-1:1);
+  const list=data.slice().sort(chrono);
   let prev=null; // voce precedente (come excel: differenza solo con la riga subito sopra)
   for(const e of list){
     e.litri=(e.importo>0&&e.prezzo>0)?e.importo/e.prezzo:null;
@@ -375,9 +425,9 @@ function render(){
     ${cell("Spesa totale",fmt(s.spesa,2," €"))}
     ${cell("Litri totali",fmt(s.litri,1," L"))}
     ${cell("Km percorsi",fmt(s.km,0," km"))}
-    ${cell("Consumo medio",fmt(s.consMedio,2),"km/l")}
-    ${cell("Prezzo medio",fmt(s.prezzoMedio,3),"€/l")}
-    ${cell("Costo medio",fmt(s.costoKm,3),"€/km")}
+    ${cell("Consumo medio",fmt(s.consMedio,2),"km/l","","key")}
+    ${cell("Prezzo medio",fmt(s.prezzoMedio,3),"€/l","","key")}
+    ${cell("Costo medio",fmt(s.costoKm,3),"€/km","","key")}
     ${cell("Spesa media / pieno",fmt(s.spesaPieno,2," €"))}
     ${cell("Consumo migliore",fmt(s.best,2),"km/l")}
     ${cell("Consumo peggiore",fmt(s.worst,2),"km/l")}
@@ -399,18 +449,18 @@ function render(){
         </span>
       </div>
       <div class="meta">
-        <span><b>${fmt(e.importo,2," €")}</b></span>
-        <span>${fmt(e.prezzo,3," €/l")}</span>
-        <span><b>${fmt(e.litri,2," L")}</b></span>
+        <span class="hl ${cc}">${e.consumo!=null?fmt(e.consumo,2," km/l"):"—"}</span>
+        <span><b>${fmt(e.prezzo,3," €/l")}</b></span>
+        <span>${fmt(e.importo,2," €")}</span>
+        <span>${fmt(e.litri,2," L")}</span>
         <span>${e.kmPerc!=null?fmt(e.kmPerc,0," km"):"—"}</span>
-        <span class="${cc}"><b>${e.consumo!=null?fmt(e.consumo,2," km/l"):"—"}</b></span>
       </div>
     </div>`;
   }).join("");
 }
-function cell(k,v,suf,extra){
+function cell(k,v,suf,extra,vclass){
   return `<div class="${extra||''}"><div class="k">${k}</div>
-    <div class="v">${v}${suf?` <small>${suf}</small>`:""}</div></div>`;
+    <div class="v ${vclass||''}">${v}${suf?` <small>${suf}</small>`:""}</div></div>`;
 }
 
 // preview litri live
@@ -454,7 +504,7 @@ function del(i){
 }
 
 function exportData(){
-  const all={version:2,fuel:data,manut,problemi,ricambi};
+  const all={version:2,fuel:data,manut,extra,problemi,ricambi};
   const blob=new Blob([JSON.stringify(all,null,2)],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -471,10 +521,11 @@ function importData(inp){
     else {
       if(Array.isArray(d.fuel)) data=d.fuel;
       if(Array.isArray(d.manut)) manut=d.manut;
+      if(Array.isArray(d.extra)) extra=d.extra;
       if(Array.isArray(d.problemi)) problemi=d.problemi;
       if(Array.isArray(d.ricambi)) ricambi=d.ricambi;
     }
-    save(); lsSave("manut_v1",manut); lsSave("prob_v1",problemi); lsSave("ric_v1",ricambi);
+    save(); lsSave("manut_v1",manut); lsSave("extra_v1",extra); lsSave("prob_v1",problemi); lsSave("ric_v1",ricambi);
     renderAll(); alert("Importato.");
   }catch(e){ alert("File non valido."); } };
   r.readAsText(f);
@@ -502,6 +553,50 @@ function cancelM(){
   editManut=null; editMode("m-save","m-cancel",false);
   ["m-date","m-desc","m-prz","m-km"].forEach(id=>document.getElementById(id).value="");
 }
+
+// ---- Extra (spese fuori manutenzione ordinaria) ----
+function addExtra(){
+  const e={date:document.getElementById("x-date").value||null,
+    desc:document.getElementById("x-desc").value.trim(),
+    prezzo:num(document.getElementById("x-prz").value),
+    km:num(document.getElementById("x-km").value)};
+  if(!e.desc||!e.prezzo){ alert("Inserisci descrizione e prezzo."); return; }
+  if(editExtra!=null){ extra[editExtra]=e; } else { extra.push(e); }
+  lsSave("extra_v1",extra); cancelEx(); renderAll();
+}
+function editEx(i){
+  const e=extra[i];
+  document.getElementById("x-date").value=e.date||"";
+  document.getElementById("x-desc").value=e.desc||"";
+  document.getElementById("x-prz").value=e.prezzo??"";
+  document.getElementById("x-km").value=e.km??"";
+  editExtra=i; editMode("x-save","x-cancel",true); showSec("extra");
+}
+function cancelEx(){
+  editExtra=null; editMode("x-save","x-cancel",false);
+  ["x-date","x-desc","x-prz","x-km"].forEach(id=>document.getElementById(id).value="");
+}
+function delEx(i){ if(confirm("Eliminare questa spesa extra?")){ extra.splice(i,1); lsSave("extra_v1",extra); renderAll(); } }
+function renderExtra(){
+  document.getElementById("x-tot").textContent=eur(extra.reduce((s,e)=>s+(e.prezzo||0),0));
+  const box=document.getElementById("x-list");
+  if(!extra.length){ box.innerHTML='<div class="empty">Nessuna spesa extra.</div>'; return; }
+  box.innerHTML=extra.map((e,i)=>({e,i})).sort((a,b)=>(a.e.date||"")<(b.e.date||"")?1:-1).map(({e,i})=>`
+    <div class="item">
+      <div class="top">
+        <span class="desc">${esc(e.desc)}</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span class="dt">${dmy(e.date)}</span>
+          <button class="ed" title="Modifica" onclick="editEx(${i})">✎</button>
+          <button class="x" title="Elimina" onclick="delEx(${i})">✕</button>
+        </span>
+      </div>
+      <div class="meta">
+        <span class="hl">${eur(e.prezzo)}</span>
+        ${e.km!=null?`<span>${fmt(e.km,0," km")}</span>`:""}
+      </div>
+    </div>`).join("");
+}
 function delManut(i){ if(confirm("Eliminare questa manutenzione?")){ manut.splice(i,1); lsSave("manut_v1",manut); renderAll(); } }
 function renderManut(){
   document.getElementById("m-tot").textContent=eur(manut.reduce((s,e)=>s+(e.prezzo||0),0));
@@ -518,7 +613,7 @@ function renderManut(){
         </span>
       </div>
       <div class="meta">
-        <span><b>${eur(e.prezzo)}</b></span>
+        <span class="hl">${eur(e.prezzo)}</span>
         ${e.km!=null?`<span>${fmt(e.km,0," km")}</span>`:""}
       </div>
     </div>`).join("");
@@ -593,7 +688,7 @@ function renderRic(){
       <div class="top">
         <span class="desc">${esc(e.nome)}</span>
         <span style="display:flex;align-items:center;gap:8px">
-          <span class="dt">${e.prezzo!=null?eur(e.prezzo):"—"}</span>
+          <span class="hl">${e.prezzo!=null?eur(e.prezzo):"—"}</span>
           <button class="ed" title="Modifica" onclick="editR(${i})">✎</button>
           <button class="x" title="Elimina" onclick="delRic(${i})">✕</button>
         </span>
@@ -606,19 +701,21 @@ function renderRic(){
 function renderSpese(){
   const benz=data.reduce((s,e)=>s+(e.importo||0),0);
   const man=manut.reduce((s,e)=>s+(e.prezzo||0),0);
+  const ext=extra.reduce((s,e)=>s+(e.prezzo||0),0);
   const ric=ricambi.reduce((s,e)=>s+(e.prezzo||0),0);
   document.getElementById("spese").innerHTML=`
     ${cell("Benzina",eur(benz))}
     ${cell("Manutenzione",eur(man))}
+    ${cell("Extra",eur(ext))}
     ${cell("Ricambi",eur(ric))}
-    ${cell("TOTALE",eur(benz+man+ric),"","full")}
+    ${cell("TOTALE",eur(benz+man+ext+ric),"","full","tot")}
   `;
 }
 
-function renderAll(){ render(); renderManut(); renderProb(); renderRic(); renderSpese(); }
+function renderAll(){ render(); renderManut(); renderExtra(); renderProb(); renderRic(); renderSpese(); }
 
 function showSec(t){
-  for(const v of ["benzina","manut","prob","ric","spese"]){
+  for(const v of ["benzina","manut","extra","prob","ric","spese"]){
     document.getElementById("sec-"+v).hidden=(v!==t);
     document.getElementById("nav-"+v).classList.toggle("on",v===t);
   }
